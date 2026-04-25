@@ -265,14 +265,15 @@ interface PipelineDeps {
 export function buildOrderPipeline(deps: PipelineDeps): OrderProcessor {
   const base = new BaseOrderProcessor();
 
+  // referente al decorador del cupon
+  const coupon = new CouponDecorator(base, deps.couponService);
+
   // referente al decorador de los Taxes
   const taxContext = new TaxContext();
-  const tax = new TaxDecorator(base, taxContext);
-  // referente al decorador del cupon
-  const coupon = new CouponDecorator(tax, deps.couponService);
+  const tax = new TaxDecorator(coupon, taxContext);
 
   // referente al decorador del FraudLimit
-  const fraud = new FraudDetectionDecorator(coupon, deps.fraudService);
+  const fraud = new FraudDetectionDecorator(tax, deps.fraudService);
 
   // referente al decorador del RateLimit
   const rate = new RateLimitDecorator(

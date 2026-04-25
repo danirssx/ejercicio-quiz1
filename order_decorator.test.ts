@@ -17,7 +17,7 @@ import {
   buildOrderPipeline,
 } from "./order_decorator.ts";
 
-// ─── Mock Orders ────────────────────────────────────────────────────────────
+// Órdenes de prueba
 
 const orderUS: Order = {
   id: "order-001",
@@ -79,7 +79,7 @@ const orderRateLimitedCustomer: Order = {
   shippingCountry: "US",
 };
 
-// ─── Mock Services ───────────────────────────────────────────────────────────
+// Data Genérica de los servicios
 
 const fraudServiceOk: FraudService = {
   evaluateRisk: vi.fn().mockResolvedValue(30),
@@ -107,7 +107,7 @@ const rateLimitExceeded: RateLimitScore = {
   rateLimit: vi.fn().mockResolvedValue(5),
 };
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
+// Tests aplicados
 
 describe("TaxDecorator", () => {
   it("aplica impuesto del 8.25% para órdenes con destino US", async () => {
@@ -235,7 +235,9 @@ describe("FraudDetectionDecorator", () => {
       fraudServiceBlocked,
     );
 
-    await expect(pipeline.process(orderHighRisk)).rejects.toThrow(FraudRiskError);
+    await expect(pipeline.process(orderHighRisk)).rejects.toThrow(
+      FraudRiskError,
+    );
   });
 
   it("agrega una entrada al auditTrail al aprobar la orden", async () => {
@@ -270,9 +272,9 @@ describe("RateLimitDecorator", () => {
       3,
     );
 
-    await expect(
-      pipeline.process(orderRateLimitedCustomer),
-    ).rejects.toThrow(RateLimitExceededError);
+    await expect(pipeline.process(orderRateLimitedCustomer)).rejects.toThrow(
+      RateLimitExceededError,
+    );
   });
 
   it("agrega una entrada al auditTrail al procesar con éxito", async () => {
@@ -319,9 +321,9 @@ describe("buildOrderPipeline (integration)", () => {
       rateLimitScore: rateLimitExceeded,
     });
 
-    await expect(
-      pipeline.process(orderRateLimitedCustomer),
-    ).rejects.toThrow(RateLimitExceededError);
+    await expect(pipeline.process(orderRateLimitedCustomer)).rejects.toThrow(
+      RateLimitExceededError,
+    );
   });
 
   it("propaga FraudRiskError después de que pasa el control de rate limit", async () => {
@@ -330,16 +332,18 @@ describe("buildOrderPipeline (integration)", () => {
       fraudService: fraudServiceBlocked,
     });
 
-    await expect(pipeline.process(orderHighRisk)).rejects.toThrow(FraudRiskError);
+    await expect(pipeline.process(orderHighRisk)).rejects.toThrow(
+      FraudRiskError,
+    );
   });
 
   it("aplica el descuento del cupón y luego el impuesto sobre la base reducida", async () => {
-    // coupon $10 → base $90 → tax US 8.25%
+    // Coupon es la capa más interna: corre primero → descuento $10 → base imponible $90 → tax US 8.25%
     const pipeline = buildOrderPipeline(deps);
     const result = await pipeline.process(orderWithCoupon);
 
     expect(result.discountUsd).toBe(10);
-    expect(result.taxUsd).toBeCloseTo(8.25); // 100 × 8.25% (Tax corre antes de Coupon en el pipeline)
+    expect(result.taxUsd).toBeCloseTo(7.43); // 90 × 8.25% (Coupon corre antes que Tax)
   });
 
   it("continúa con discountUsd en 0 cuando el servicio de cupones falla", async () => {
